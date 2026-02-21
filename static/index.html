@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 招聘系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: #fff; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h1 { color: #333; }
+        .nav { display: flex; gap: 20px; margin-top: 15px; }
+        .nav a { text-decoration: none; color: #666; padding: 8px 16px; border-radius: 4px; }
+        .nav a:hover, .nav a.active { background: #007bff; color: #fff; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        button { background: #007bff; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #0056b3; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; }
+        .status { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .status-open { background: #d4edda; color: #155724; }
+        .status-closed { background: #f8d7da; color: #721c24; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-contacted { background: #cce5ff; color: #004085; }
+        .status-interviewing { background: #d1ecf1; color: #0c5460; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>AI 招聘系统</h1>
+            <nav class="nav">
+                <a href="#" class="active" data-page="jobs">岗位管理</a>
+                <a href="#" data-page="candidates">候选人</a>
+                <a href="#" data-page="search">搜索候选人</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Jobs Page -->
+        <div id="jobs-page">
+            <div class="card">
+                <h2>创建岗位</h2>
+                <form id="job-form">
+                    <div class="form-group">
+                        <label>职位名称 *</label>
+                        <input type="text" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>部门</label>
+                        <input type="text" name="department">
+                    </div>
+                    <div class="form-group">
+                        <label>工作地点</label>
+                        <input type="text" name="location">
+                    </div>
+                    <div class="form-group">
+                        <label>薪资范围</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" name="salary_min" placeholder="最低薪资">
+                            <input type="number" name="salary_max" placeholder="最高薪资">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>职位描述 *</label>
+                        <textarea name="description" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>任职要求</label>
+                        <textarea name="requirements" rows="3"></textarea>
+                    </div>
+                    <button type="submit">创建岗位</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>岗位列表</h2>
+                <table id="jobs-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>职位名称</th>
+                            <th>部门</th>
+                            <th>地点</th>
+                            <th>薪资</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Candidates Page -->
+        <div id="candidates-page" class="hidden">
+            <div class="card">
+                <h2>候选人列表</h2>
+                <div class="form-group">
+                    <label>筛选岗位</label>
+                    <select id="filter-job">
+                        <option value="">全部</option>
+                    </select>
+                </div>
+                <table id="candidates-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>姓名</th>
+                            <th>职位</th>
+                            <th>公司</th>
+                            <th>来源</th>
+                            <th>匹配度</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Search Page -->
+        <div id="search-page" class="hidden">
+            <div class="card">
+                <h2>搜索候选人</h2>
+                <form id="search-form">
+                    <div class="form-group">
+                        <label>选择岗位</label>
+                        <select name="job_id" required>
+                            <option value="">请选择岗位</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>搜索关键词</label>
+                        <input type="text" name="keyword" placeholder="如: Python, Java, 架构师" required>
+                    </div>
+                    <button type="submit">搜索</button>
+                </form>
+            </div>
+            <div id="search-results" class="card hidden">
+                <h2>搜索结果</h2>
+                <table id="search-results-table">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>职位</th>
+                            <th>公司</th>
+                            <th>经验</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+
+        // Navigation
+        document.querySelectorAll('.nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.querySelectorAll('.nav a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+
+                document.getElementById('jobs-page').classList.add('hidden');
+                document.getElementById('candidates-page').classList.add('hidden');
+                document.getElementById('search-page').classList.add('hidden');
+
+                const page = link.dataset.page;
+                document.getElementById(page + '-page').classList.remove('hidden');
+
+                if (page === 'jobs') loadJobs();
+                if (page === 'candidates') loadCandidates();
+                if (page === 'search') loadJobsForSearch();
+            });
+        });
+
+        // Load Jobs
+        async function loadJobs() {
+            const response = await fetch(`${API_BASE}/jobs`);
+            const jobs = await response.json();
+            const tbody = document.querySelector('#jobs-table tbody');
+            tbody.innerHTML = jobs.map(job => `
+                <tr>
+                    <td>${job.id}</td>
+                    <td>${job.title}</td>
+                    <td>${job.department || '-'}</td>
+                    <td>${job.location || '-'}</td>
+                    <td>${job.salary_min ? `${job.salary_min}-${job.salary_max}` : '-'}</td>
+                    <td><span class="status status-${job.status}">${job.status}</span></td>
+                    <td>
+                        <button onclick="deleteJob(${job.id})">删除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Create Job
+        document.getElementById('job-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                title: formData.get('title'),
+                department: formData.get('department'),
+                location: formData.get('location'),
+                salary_min: formData.get('salary_min') ? parseInt(formData.get('salary_min')) : null,
+                salary_max: formData.get('salary_max') ? parseInt(formData.get('salary_max')) : null,
+                description: formData.get('description'),
+                requirements: formData.get('requirements'),
+            };
+
+            await fetch(`${API_BASE}/jobs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            e.target.reset();
+            loadJobs();
+        });
+
+        // Delete Job
+        async function deleteJob(id) {
+            if (confirm('确定删除此岗位？')) {
+                await fetch(`${API_BASE}/jobs/${id}`, { method: 'DELETE' });
+                loadJobs();
+            }
+        }
+
+        // Load Candidates
+        async function loadCandidates() {
+            const jobId = document.getElementById('filter-job').value;
+            const url = jobId ? `${API_BASE}/candidates?job_id=${jobId}` : `${API_BASE}/candidates`;
+            const response = await fetch(url);
+            const candidates = await response.json();
+            const tbody = document.querySelector('#candidates-table tbody');
+            tbody.innerHTML = candidates.map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td>${c.name}</td>
+                    <td>${c.title || '-'}</td>
+                    <td>${c.company || '-'}</td>
+                    <td>${c.source}</td>
+                    <td>${c.match_score ? c.match_score + '%' : '-'}</td>
+                    <td><span class="status status-${c.status}">${c.status}</span></td>
+                    <td>
+                        <button onclick="updateStatus(${c.id}, 'contacted')">联系</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update Candidate Status
+        async function updateStatus(id, status) {
+            await fetch(`${API_BASE}/candidates/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadCandidates();
+        }
+
+        // Load Jobs for Search
+        async function loadJobsForSearch() {
+            const response = await fetch(`${API_BASE}/jobs`);
+            const jobs = await response.json();
+
+            document.querySelector('#search-form select[name="job_id"]').innerHTML =
+                '<option value="">请选择岗位</option>' +
+                jobs.map(job => `<option value="${job.id}">${job.title}</option>`).join('');
+
+            document.getElementById('filter-job').innerHTML =
+                '<option value="">全部</option>' +
+                jobs.map(job => `<option value="${job.id}">${job.title}</option>`).join('');
+        }
+
+        // Search Candidates
+        document.getElementById('search-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const jobId = formData.get('job_id');
+            const keyword = formData.get('keyword');
+
+            // TODO: Implement real search with scraper
+            alert('搜索功能待实现 - 将调用猎聘爬虫 API');
+        });
+
+        // Initialize
+        loadJobs();
+    </script>
+</body>
+</html>

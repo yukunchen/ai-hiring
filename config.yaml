@@ -1,0 +1,37 @@
+# AI Hiring System Configuration
+
+database:
+  path: "aihiring.db"
+
+storage:
+  resume_dir: "resumes"
+
+scrapers:
+  liepin:
+    enabled: true
+    cookies: ""
+    base_url: "https://www.liepin.com"
+  zhipin:
+    enabled: false
+    cookies: ""
+  linkedin:
+    enabled: false
+    cookies: ""
+
+openai:
+  api_key: "${OPENAI_API_KEY}"
+  model: "gpt-4"
+  temperature: 0.7
+
+smtp:
+  host: "smtp.example.com"
+  port: 587
+  username: "hr@example.com"
+  password: "${SMTP_PASSWORD}"
+  from_name: "HR Team"
+  use_tls: true
+
+app:
+  host: "0.0.0.0"
+  port: 8000
+  debug: true

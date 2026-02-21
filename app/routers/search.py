@@ -4,6 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.services.scrapers.factory import get_scraper_factory
+from app.services.ai_search import get_ai_search_service
+from app.database import AsyncSessionLocal
+from sqlalchemy import select
+from app.models import Job
 
 router = APIRouter(prefix="/api/search", tags=["Search"])
 
@@ -156,3 +160,53 @@ async def get_source_status(source: str):
         }
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Unknown source: {source}")
+
+
+@router.get("/ai")
+async def ai_search_candidates(
+    keyword: str = Query(..., min_length=1),
+    job_id: int = Query(..., gt=0),
+    location: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=50),
+    sources: Optional[str] = Query(None, description="Comma-separated sources"),
+):
+    """AI-powered search with candidate matching.
+
+    Searches candidates and uses AI to calculate match scores
+    based on the job requirements.
+
+    Args:
+        keyword: Search keyword
+        job_id: Job ID for matching
+        location: Filter by location
+        limit: Maximum results
+        sources: Comma-separated list of sources
+
+    Returns:
+        List of candidates with match scores
+    """
+    # Get job details
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Job).where(Job.id == job_id))
+        job = result.scalar_one_or_none()
+
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+
+        # Parse sources
+        source_list = sources.split(",") if sources else ["liepin", "zhipin", "linkedin"]
+
+        # AI search
+        ai_search = get_ai_search_service()
+        results = await ai_search.search_with_ai_match(
+            job_id=job.id,
+            job_title=job.title,
+            job_description=job.description,
+            job_requirements=job.requirements or "",
+            keyword=keyword,
+            location=location,
+            sources=source_list,
+            limit=limit,
+        )
+
+        return results

@@ -28,6 +28,13 @@
         .status-pending { background: #fff3cd; color: #856404; }
         .status-contacted { background: #cce5ff; color: #004085; }
         .status-interviewing { background: #d1ecf1; color: #0c5460; }
+        .status-liepin { background: #e8f5e9; color: #2e7d32; }
+        .status-zhipin { background: #fff3e0; color: #ef6c00; }
+        .status-linkedin { background: #e3f2fd; color: #1565c0; }
+        .score { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 13px; }
+        .score-high { background: #d4edda; color: #155724; }
+        .score-mid { background: #fff3cd; color: #856404; }
+        .score-low { background: #f8d7da; color: #721c24; }
         .hidden { display: none; }
     </style>
 </head>
@@ -142,11 +149,22 @@
                         <label>搜索关键词</label>
                         <input type="text" name="keyword" placeholder="如: Python, Java, 架构师" required>
                     </div>
+                    <div class="form-group">
+                        <label>搜索模式</label>
+                        <div style="display: flex; gap: 10px;">
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="radio" name="search_mode" value="basic" checked> 基础搜索
+                            </label>
+                            <label style="display: flex; align-items: center; font-weight: normal;">
+                                <input type="radio" name="search_mode" value="ai"> AI 智能匹配
+                            </label>
+                        </div>
+                    </div>
                     <button type="submit">搜索</button>
                 </form>
             </div>
             <div id="search-results" class="card hidden">
-                <h2>搜索结果</h2>
+                <h2>搜索结果 <span id="search-mode-badge" style="font-size: 12px; color: #666; font-weight: normal;"></span></h2>
                 <table id="search-results-table">
                     <thead>
                         <tr>
@@ -154,6 +172,7 @@
                             <th>职位</th>
                             <th>公司</th>
                             <th>经验</th>
+                            <th>匹配度</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -291,10 +310,94 @@
             const formData = new FormData(e.target);
             const jobId = formData.get('job_id');
             const keyword = formData.get('keyword');
+            const searchMode = formData.get('search_mode') || 'basic';
 
-            // TODO: Implement real search with scraper
-            alert('搜索功能待实现 - 将调用猎聘爬虫 API');
+            if (!jobId || !keyword) {
+                alert('请选择岗位并输入关键词');
+                return;
+            }
+
+            // Show loading
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.classList.remove('hidden');
+            const tbody = document.querySelector('#search-results-table tbody');
+            tbody.innerHTML = '<tr><td colspan="6">搜索中...</td></tr>';
+
+            // Update mode badge
+            const modeBadge = document.getElementById('search-mode-badge');
+            modeBadge.textContent = searchMode === 'ai' ? '(AI智能匹配)' : '';
+
+            // Call search API
+            try {
+                let apiUrl;
+                if (searchMode === 'ai') {
+                    apiUrl = `${API_BASE}/search/ai?keyword=${encodeURIComponent(keyword)}&job_id=${jobId}&limit=20`;
+                } else {
+                    apiUrl = `${API_BASE}/search?keyword=${encodeURIComponent(keyword)}&job_id=${jobId}&limit=20`;
+                }
+
+                const response = await fetch(apiUrl);
+                const candidates = await response.json();
+
+                if (candidates.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6">未找到候选人</td></tr>';
+                    return;
+                }
+
+                // Display results
+                tbody.innerHTML = candidates.map(c => {
+                    const score = c.match_score;
+                    let scoreHtml = '-';
+                    if (score !== undefined && score !== null) {
+                        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-mid' : 'score-low';
+                        scoreHtml = `<span class="score ${scoreClass}">${score}%</span>`;
+                    }
+                    return `
+                        <tr>
+                            <td>${c.name}</td>
+                            <td>${c.title || '-'}</td>
+                            <td>${c.company || '-'}</td>
+                            <td>${c.experience || '-'}</td>
+                            <td>${scoreHtml}</td>
+                            <td>
+                                <span class="status status-${c.source}">${c.source}</span>
+                                <button onclick="saveCandidate(${jobId}, '${c.name}', '${c.title || ''}', '${c.company || ''}', '${c.source}', '${c.resume_url || ''}', '${c.source_url || ''}', ${score || 0})">保存</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6">搜索失败: ${error.message}</td></tr>`;
+            }
         });
+
+        // Save Candidate from Search Results
+        async function saveCandidate(jobId, name, title, company, source, resumeUrl, sourceUrl, matchScore = null) {
+            try {
+                const response = await fetch(`${API_BASE}/candidates`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        job_id: parseInt(jobId),
+                        name: name,
+                        title: title,
+                        company: company,
+                        source: source,
+                        source_url: sourceUrl,
+                        match_score: matchScore,
+                        status: 'pending'
+                    })
+                });
+
+                if (response.ok) {
+                    alert('候选人已保存！');
+                } else {
+                    alert('保存失败');
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        }
 
         // Initialize
         loadJobs();

@@ -12,11 +12,13 @@ scrapers:
     cookies: ""
     base_url: "https://www.liepin.com"
   zhipin:
-    enabled: false
+    enabled: true
     cookies: ""
+    base_url: "https://www.zhipin.com"
   linkedin:
-    enabled: false
+    enabled: true
     cookies: ""
+    base_url: "https://www.linkedin.com"
 
 openai:
   api_key: "${OPENAI_API_KEY}"

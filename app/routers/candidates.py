@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 from app.database import get_db
 from app.models import Candidate
+from app.services.resume_generation import get_resume_generation_service
 
 router = APIRouter(prefix="/api/candidates", tags=["Candidates"])
 
@@ -220,3 +221,43 @@ async def delete_candidate(
 
     await db.delete(candidate)
     await db.commit()
+
+
+@router.post("/{candidate_id}/generate-resume", response_model=CandidateResponse)
+async def generate_candidate_resume(
+    candidate_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate AI resume for a candidate based on their basic info.
+
+    Args:
+        candidate_id: Candidate ID
+        db: Database session
+
+    Returns:
+        Updated candidate with generated resume content
+
+    Raises:
+        HTTPException: If candidate not found
+    """
+    result = await db.execute(select(Candidate).where(Candidate.id == candidate_id))
+    candidate = result.scalar_one_or_none()
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+
+    # Generate resume using AI service
+    resume_service = get_resume_generation_service()
+    resume_content = await resume_service.generate_resume_from_info(
+        name=candidate.name,
+        title=candidate.title,
+        company=candidate.company,
+        experience=candidate.experience,
+        source=candidate.source,
+    )
+
+    # Update candidate with generated resume
+    candidate.resume_content = resume_content
+    await db.commit()
+    await db.refresh(candidate)
+
+    return candidate.to_dict()
